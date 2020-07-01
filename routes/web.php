@@ -1,5 +1,5 @@
 <?php
-
+use Illuminate\Support\Facades\Route;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -11,6 +11,8 @@
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::get('/', 'PageController@home')->name('home');
+
+Route::namespace('Auth')->middleware('guest')->group(function () {
+    Route::post('/register', 'RegisterController@register');
 });
