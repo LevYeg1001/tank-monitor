@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterRequest;
+use App\Mail\NewUserRegistered;
+use App\Models\VerifyEmail;
 use App\Providers\RouteServiceProvider;
-use App\User;
+use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 
 class RegisterController extends Controller
 {
@@ -50,19 +50,27 @@ class RegisterController extends Controller
      */
     public function register(RegisterRequest $request)
     {
-        try{
+        try {
             Log::info('Start RegisterController:register');
             $data = $request->all();
-            $newUser =  User::create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-            ]);
-            if (!$newUser) {
+            // Get some random bytes
+            $token = random_bytes(8);
+            $data['token'] = bin2hex($token);
+            $newUser =  new User($data);
+            $newUserCreated = $newUser->save();
+            if (!$newUserCreated) {
                 throw new \Exception('Unable to create new user.');
             }
-            Log::info('Start RegisterController:register:success');
+            $newUser->verifyEmail()->create([
+                'token' => $data['token'],
+            ]);
+            $mailData = [
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'url' =>  env('APP_URL') . '/verifyEmail/' . $data['token']
+            ];
+            Mail::to($data['email'])->send(new NewUserRegistered($mailData));
+            Log::info('End RegisterController:register:success');
 
             return response()->json([
                 'user' => $newUser,
@@ -71,26 +79,13 @@ class RegisterController extends Controller
         } catch (\Exception $exception) {
             $message = $exception->getMessage();
             Log::info('Catch for RegisterController:register');
+            Log::error($message);
+            Log::info('End RegisterController:register:error');
 
             return response()->json([
                 'message' => $message,
                 'status' => 400,
             ]);
         }
-    }
-
-    /**
-     * Create a new user instance after a valid registration.
-     *
-     * @param  array  $data
-     * @return \App\User
-     */
-    protected function create(array $data)
-    {
-        return User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
     }
 }
