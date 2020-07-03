@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RegisterRequest;
-use App\Mail\NewUserRegistered;
-use App\Models\VerifyEmail;
 use App\Providers\RouteServiceProvider;
 use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class RegisterController extends Controller
 {
@@ -45,47 +42,30 @@ class RegisterController extends Controller
     }
 
     /**
-     * @param RegisterRequest $request
+     * Get a validator for an incoming registration request.
+     *
+     * @param  array  $data
+     * @return \Illuminate\Contracts\Validation\Validator
+     */
+    protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+    }
+
+    /**
+     * @param array $data
      * @return mixed
      */
-    public function register(RegisterRequest $request)
+    protected function create(array $data)
     {
-        try {
-            Log::info('Start RegisterController:register');
-            $data = $request->all();
-            // Get some random bytes
-            $token = random_bytes(8);
-            $data['token'] = bin2hex($token);
-            $newUser =  new User($data);
-            $newUserCreated = $newUser->save();
-            if (!$newUserCreated) {
-                throw new \Exception('Unable to create new user.');
-            }
-            $newUser->verifyEmail()->create([
-                'token' => $data['token'],
-            ]);
-            $mailData = [
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'url' =>  env('APP_URL') . '/verifyEmail/' . $data['token']
-            ];
-            Mail::to($data['email'])->send(new NewUserRegistered($mailData));
-            Log::info('End RegisterController:register:success');
-
-            return response()->json([
-                'user' => $newUser,
-                'status' => 200,
-            ]);
-        } catch (\Exception $exception) {
-            $message = $exception->getMessage();
-            Log::info('Catch for RegisterController:register');
-            Log::error($message);
-            Log::info('End RegisterController:register:error');
-
-            return response()->json([
-                'message' => $message,
-                'status' => 400,
-            ]);
-        }
+        return User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+        ]);
     }
 }
