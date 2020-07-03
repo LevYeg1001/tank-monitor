@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\API\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\LoginRequest;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
@@ -49,8 +49,22 @@ class LoginController extends Controller
     public function login(LoginRequest $request)
     {
         try {
+            Log::info('Start LoginController:login');
             $data = $request->all();
-            dd($data);
+            $attemptSuccess = Auth::attempt($data);
+            if (!$attemptSuccess) {
+                throw new \Exception('Unable to login');
+            }
+            $user = Auth::user();
+
+            Log::info('End LoginController:login:success');
+
+            return response()->json([
+                'success' => true,
+                'token' => $user->api_token,
+                'user' => $user,
+                'status' => 200,
+            ]);
         } catch (\Exception $exception) {
             $message = $exception->getMessage();
             Log::info('Catch for LoginController:login');

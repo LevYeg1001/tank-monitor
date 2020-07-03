@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Mail\NewUserRegistered;
 use App\Models\VerifyEmail;
 use App\Providers\RouteServiceProvider;
@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class RegisterController extends Controller
 {
@@ -56,6 +57,7 @@ class RegisterController extends Controller
             // Get some random bytes
             $token = random_bytes(8);
             $data['token'] = bin2hex($token);
+            $data['api_token'] = Str::random(80);
             $newUser =  new User($data);
             $newUserCreated = $newUser->save();
             if (!$newUserCreated) {

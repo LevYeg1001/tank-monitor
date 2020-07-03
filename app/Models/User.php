@@ -20,6 +20,7 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
+        'api_token',
     ];
 
     /**
@@ -28,7 +29,9 @@ class User extends Authenticatable
      * @var array
      */
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
+        'api_token',
     ];
 
     /**
@@ -44,7 +47,7 @@ class User extends Authenticatable
      * @param $pass
      */
     public function setPasswordAttribute($pass){
-        $this->attributes['password'] = Hash::make($pass);
+        $this->attributes['password'] = bcrypt($pass);
     }
 
     /**
